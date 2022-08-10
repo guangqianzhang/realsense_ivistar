@@ -1,0 +1,17 @@
+  <class_libraries>
+  <library path="lib/libreal">
+    <class name="realsense/realsense_nodelet" type="Realsense::realsense_nodelet" base_class_type="nodelet::Nodelet">
+      <description>
+        A detection in realsense by light
+      </description>
+    </class>
+  </library>
+  <library path="lib/librs_light">
+    <class name="realsense/light" type="Realsense::light_plugin" base_class_type="nodelet::Nodelet">
+      <description>
+        A detection in realsense by light
+      </description>
+    </class>
+  </library>
+
+</class_libraries>

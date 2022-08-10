@@ -1,0 +1,4 @@
+find_package(OpenGL REQUIRED)
+include_directories(${OPENGL_INCLUDE_DIR})
+set(DEPENDENCIES glfw ${OPENGL_LIBRARIES})
+list(APPEND ALL_TARGET_LIBRARIES ${OpenGL_LIBRARIES})
