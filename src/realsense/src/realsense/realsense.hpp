@@ -16,8 +16,8 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/Image.h>
 #include <yaml-cpp/yaml.h>
-#include <rockauto_msgs/DetectedObjectArray.h>
-#include <rockauto_msgs/ImageObj.h>
+#include <smartcar_msgs/DetectedObjectArray.h>
+#include <smartcar_msgs/ImageObj.h>
 namespace RealSense
 {
     using namespace rs2;
@@ -25,11 +25,6 @@ namespace RealSense
     class realsense
     {
     private:
-        const size_t inWidth = 300;
-        const size_t inHeight = 300;
-        const float WHRatio = inWidth / (float)inHeight;
-        const float inScaleFactor = 0.007843f;
-        const float meanVal = 127.5;
 
         // boost::shared_ptr<Yolo> yolo_;
         std::string __NODE_NAME__;
@@ -44,7 +39,8 @@ namespace RealSense
         ros::NodeHandle private_nh;
         bool detection_flag_ = true;
         bool Stop_Sign = false;
-
+         int stopcount;
+         double stop_distance=0.0;
         Config config_v5;
         std::unique_ptr<Detector> detector_;
         std::vector<BatchResult> batch_res;
@@ -63,12 +59,8 @@ namespace RealSense
             rs2::colorizer color_map;
             // Declare rates printer for showing streaming rates of the enabled streams.
             rs2::rates_printer printer;
-
-            // Declare RealSense pipeline, encapsulating the actual device and sensors
             rs2::pipeline pipe;
-            // Start streaming with default recommended configuration
-            // The default video configuration contains Depth and Color streams
-            // If a device is capable to stream IMU data, both Gyro and Accelerometer are enabled by default
+
             pipe.start();
 
             while (app) // Application still alive?
@@ -123,7 +115,7 @@ namespace RealSense
         }
         void detectByDnn()
         {
-            // Start streaming from Intel RealSense Camera
+            
             pipeline pipe;
             auto config = pipe.start();
             auto profile = config.get_stream(RS2_STREAM_COLOR)
@@ -134,12 +126,13 @@ namespace RealSense
 
             while (getWindowProperty(window_name, WND_PROP_AUTOSIZE) >= 0 && ros::ok())
             {
-
+                timer.reset();
                 // Wait for the next set of frames
                 auto data = pipe.wait_for_frames();
                 double start_time = (double)cv::getTickCount();
                 ros::Time time = ros::Time::now();
                 // Make sure the frames are spatially aligned
+
                 data = align_to.process(data);
 
                 auto color_frame = data.get_color_frame();
@@ -155,95 +148,90 @@ namespace RealSense
                 auto color_mat = frame_to_mat(color_frame);
                 auto depth_mat = depth_frame_to_meters(depth_frame);
                 Rect depth_mat_rect(Point(0, 0), Point(depth_mat.cols, depth_mat.rows));
-                // // Crop both color and depth frames//裁减
-                // color_mat = color_mat(crop);
-                // depth_mat = depth_mat(crop);
+
                 cv::Mat work_frame;
                 color_mat.copyTo(work_frame);
-
+                timer.out("carmera ");
                 cv_bridge::CvImagePtr cv_ptr(new cv_bridge::CvImage);
                 std::vector<cv::Mat> batch_img;
                 batch_img.push_back(work_frame);
 
                 // detection
-                if (1)
+                if (detection_flag_)
                 {
                     //用于发送的消息
-                    rockauto_msgs::ImageObjPtr ImageObj(new rockauto_msgs::ImageObj);
+                    smartcar_msgs::ImageObjPtr ImageObj(new smartcar_msgs::ImageObj);
                     cv_ptr->header.stamp = time;
                     cv_ptr->encoding = "bgr8";
                     cv_ptr->image = color_mat;
                     ImageObj->roi_image = *cv_ptr->toImageMsg();
 
                     // detect
-                    // timer.reset();
+                    timer.reset();
                     detector_->detect(batch_img, batch_res);
-                    // timer.out("detect");
+                    timer.out("detect");
+                    timer.reset();
                     for (int i = 0; i < batch_img.size(); ++i)
                     {
                         for (auto &r : batch_res[i])
                         {
                             // std::cout << "batch " << i << " id:" << r.id << " prob:" << r.prob << " rect:" << r.rect << std::endl;
-                            cv::rectangle(work_frame, r.rect, cv::Scalar(255, 0, 0), 2);
-
+                        
                             std::string label = "";
-                            static int stopcount;
-                            if (r.id == Signal::stop_signal)
-                            {
-                                stopcount++;
-                                if (stopcount == 15)
-                                {
-                                    Stop_Sign = true;
-                                }
-                            }
-                            else
-                            {
-                                stopcount--;
-                                if (stopcount == 0)
-                                {
-
-                                    Stop_Sign = false;
-                                }
-                            }
-
                             checkID(r.id, label);
-                            ImageObj->type.push_back(label);
+
+                            float distance;
+                            
                             checkBox(r.rect, depth_mat);
-  
-
+                            cv::rectangle(work_frame, r.rect, cv::Scalar(255, 0, 0), 2);
                             int size = (r.rect.width > r.rect.height) ? r.rect.height / 2 : r.rect.width / 2;
-                            // std::cout<<"rct_size:"<<size<<std::endl;
                             cv::Rect depth_roi = rectCenterScale(r.rect, cv::Size(-size, -size));
-                            // std::cout<<"depth_roi:"<<depth_roi<<std::endl;
-                            cv::rectangle(work_frame, depth_roi, cv::Scalar(255, 255, 0), 2);
-
-                          rockauto_msgs::ImageRect ObjRect;
-                            ObjRect.x = depth_roi.x;
-                            ObjRect.y = depth_roi.y;
-                            ObjRect.width = depth_roi.width;
-                            ObjRect.height = depth_roi.height;
-                            ObjRect.score = r.prob;
-                            ImageObj->obj.push_back(ObjRect);
-
+                            cv::rectangle(work_frame, depth_roi, cv::Scalar(255, 0, 255), 1);
                             auto depth_mat_Roi = depth_mat(depth_roi);
                             Scalar m = mean(depth_mat_Roi);
-                            float distance = m[0];
-                            ImageObj->distanse.push_back(distance);
+                            distance = m[0];
+            
+                                if (r.id == Signal::stop_signal ){
+                                stopcount++;
+                                }else {stopcount--;}
+                                if (stopcount > 6 )
+                                {Stop_Sign = true;
+                                stop_distance=distance;
+                                stopcount=6;
+                                }else {Stop_Sign=false;}
 
+                            ImageObj->type.push_back(label);
+
+                                smartcar_msgs::ImageRect ObjRect;
+                                ObjRect.x = depth_roi.x;
+                                ObjRect.y = depth_roi.y;
+                                ObjRect.width = depth_roi.width;
+                                ObjRect.height = depth_roi.height;
+                                ObjRect.score = r.prob;
+                            ImageObj->obj.push_back(ObjRect);
+                            ImageObj->distanse.push_back(distance);
+                           
                             std::stringstream stream;
                             stream << std::fixed << std::setprecision(2) << "id:" << label << "  dis:" << distance;
                             cv::putText(work_frame, stream.str(), cv::Point(r.rect.x, r.rect.y - 5), 0, 0.5, cv::Scalar(0, 0, 255), 2);
                         }
                     }
+                    private_nh.setParam("stop_type",Stop_Sign);
+                    if(Stop_Sign)  {  private_nh.setParam("stop_distance",stop_distance);
+                    cout<<"stop distance:"<<stop_distance<<endl;}
+                     else{ private_nh.setParam("stop_distance",0);}
 
+                    light_detect_msg_pub_.publish(*ImageObj);
                     vision_detect_msg_pub_.publish(*ImageObj);
 
+                    timer.out("publish");
                 } // end if detection_flag_
+                timer.reset();
                 double end_time = (double)cv::getTickCount();
                 double fps = cv::getTickFrequency() / (end_time - start_time);
                 ROS_INFO("FPS in app: %0.3f", fps); //
-
                 cv::imshow(window_name, work_frame);
+                timer.out("imshow");
                 // cv::imshow("depth mat", depth_mat);
                 if (waitKey(1) >= 0)
                     break;
@@ -266,8 +254,8 @@ namespace RealSense
         std::cout << __NODE_NAME__ << ":detection_flag:" << detection_flag_ << std::endl;
 
         vision_detect_img_pub_ = private_nh.advertise<sensor_msgs::Image>(realsense_colorMat_T_, 1);
-        vision_detect_msg_pub_ = private_nh.advertise<rockauto_msgs::ImageObj>(realsense_ImageObj_T_, 1);
-        light_detect_msg_pub_ = private_nh.advertise<rockauto_msgs::ImageObj>(realsense_Light_T, 1);
+        vision_detect_msg_pub_ = private_nh.advertise<smartcar_msgs::ImageObj>(realsense_ImageObj_T_, 1);
+        light_detect_msg_pub_ = private_nh.advertise<smartcar_msgs::ImageObj>(realsense_Light_T, 1);
         // modelconfig
         std::string config_file_path = "/home/agx/Documents/zgq/ros/catkin_trt/src/realsense/src/trt_yolo/modelconfig.yaml";
         YAML::Node config = YAML::LoadFile(config_file_path);

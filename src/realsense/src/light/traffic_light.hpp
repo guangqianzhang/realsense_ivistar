@@ -9,9 +9,9 @@
 #include <vector>
 #include "../cvfunction.hpp"
 #include "traffic_light.hpp"
-#include <rockauto_msgs/ImageObj.h>
-#include <rockauto_msgs/ImageRect.h>
-#include <rockauto_msgs/TrafficLightResult.h>
+#include <smartcar_msgs/ImageObj.h>
+#include <smartcar_msgs/ImageRect.h>
+#include <smartcar_msgs/TrafficLightResult.h>
 using namespace cv;
 using namespace std;
 namespace Realsense
@@ -24,12 +24,20 @@ namespace Realsense
         std::string obj_type;
         int imgHeight_;
         int imgWidth_;
-
-        int LightType = 0;
-        int lightcount = 0;
-        int Rlightcount;
-        int Ylightcount;
-        int Glightcount;
+        enum Traffic_Light
+        {
+            NO_LIFHT = -1,
+            UNKNOW = 0,
+            RED = 1,
+            YELLOW = 2,
+            GREEN = 3
+        };
+        Traffic_Light LightType;
+        bool getLight_flag_ = false;
+        unsigned int lightcount = 0;
+        unsigned int Rlightcount;
+        unsigned int Ylightcount;
+        unsigned int Glightcount;
         // boost::shared_ptr<traffic_light> light_;
 
         std::string light_topic_out_;
@@ -44,14 +52,7 @@ namespace Realsense
         cv::Mat mask_red;
         cv::Mat mask_yellow;
         cv::Mat mask_green;
-        enum Traffic_Light
-        {
-            UNKNOW = 0,
-            RED = 1,
-            YELLOW = 2,
-            GREEN = 3
-        };
-        Traffic_Light light;
+        cv::Mat workimage;
 
     private:
         void mask(const cv::Mat &image, double minH, double maxH, double minS, double maxS, cv::Mat &mask)
@@ -76,7 +77,7 @@ namespace Realsense
 
             mask = hueMask & satMask;
         }
-        void image_cb(const rockauto_msgs::ImageObjConstPtr &obj);
+        void image_cb(const smartcar_msgs::ImageObjConstPtr &obj);
 
     public:
         traffic_light(ros::NodeHandle &nh);
@@ -86,6 +87,8 @@ namespace Realsense
             int count_red = 0;
             int count_green = 0;
             int count_yellow = 0;
+
+            Traffic_Light light;
             //遍历像素点
             for (int i = 0; i < mask_red.rows; i++)
             {
@@ -123,10 +126,13 @@ namespace Realsense
             {
                 Glightcount++;
             }
-            lightcount++;
-            if (lightcount > 6)
+
+            if (lightcount > 4)
             {
-                cout<<"R:"<<Rlightcount<<" Y:"<<Ylightcount<<" G:"<<Glightcount<<endl;
+                lightcount = 0;
+                cout << "R:" << Rlightcount << " Y:" << Ylightcount << " G:" << Glightcount << endl;
+                cout << "Rc:" << count_red << " Yc:" << count_yellow << " Gc:" << count_green << endl;
+
                 if ((Rlightcount > Ylightcount) && (Rlightcount > Glightcount))
                 {
                     light = Traffic_Light::RED;
@@ -143,10 +149,14 @@ namespace Realsense
                 {
                     light = Traffic_Light::UNKNOW;
                 }
-                lightcount = 0;
+
                 Rlightcount = 0;
                 Ylightcount = 0;
                 Glightcount = 0;
+            }
+            else
+            {
+                light = LightType;
             }
 
             return light;
@@ -159,6 +169,8 @@ namespace Realsense
         }
         void ShowMask()
         {
+            cv::namedWindow("raw");
+            cv::imshow("raw", workimage);
             cv::namedWindow("red");
             cv::imshow("red", mask_red);
             cv::namedWindow("yellow");
@@ -168,13 +180,13 @@ namespace Realsense
             waitKey(10);
         }
     };
-    void traffic_light::image_cb(const rockauto_msgs::ImageObjConstPtr &obj)
+    void traffic_light::image_cb(const smartcar_msgs::ImageObjConstPtr &obj)
     {
         ROS_INFO("get data!");
 
         auto start = std::chrono::steady_clock::now();
         sensor_msgs::Image img = obj->roi_image;
-        std::vector<rockauto_msgs::ImageRect> imgRectArray = obj->obj;
+        std::vector<smartcar_msgs::ImageRect> imgRectArray = obj->obj;
         std::vector<std::string> imgLabelArray = obj->type;
         std::vector<float> ingDistanceArray = obj->distanse;
 
@@ -199,8 +211,8 @@ namespace Realsense
             return;
         }
         cv::Mat raw_img = (cv_ptr->image);
-        cv::Mat workimage;
-        rockauto_msgs::TrafficLightResultPtr light_result;
+
+        smartcar_msgs::TrafficLightResultPtr light_result;
         if (imgcvRectArray.size())
         {
 
@@ -209,29 +221,40 @@ namespace Realsense
                 if (imgLabelArray[i].compare(obj_type) == 0)
                 // if (1)
                 {
-                    light_result.reset(new rockauto_msgs::TrafficLightResult);
+                    lightcount++;
+                    getLight_flag_ = true;
+                    light_result.reset(new smartcar_msgs::TrafficLightResult);
                     light_result->distance = ingDistanceArray[i];
-
-                    // int size = (imgcvRectArray[i].width > imgcvRectArray[i].height) ? imgcvRectArray[i].height / 2 : imgcvRectArray[i].width / 2;
-                    // // std::cout<<"rct_size:"<<size<<std::endl;
-                    // cv::Rect rect_roi = RealSense::rectCenterScale(imgcvRectArray[i], cv::Size(-size, -size));
-
-                    cv::Mat workimage = raw_img(imgcvRectArray[i]);
+                    workimage = raw_img(imgcvRectArray[i]);
                     imgHeight_ = workimage.rows;
                     imgWidth_ = workimage.cols;
                     // light_.reset(new traffic_light);
                     this->setMask(workimage);
-                    this->ShowMask();
+                    // this->ShowMask();
                     LightType = this->count_color();
 
                     light_result->recognition_result = LightType;
+
                     private_nh.setParam("light_type", LightType);
-                    cout << "light_result:" << LightType << endl;
+                    private_nh.setParam("light_distance", ingDistanceArray[i]);
+                    cout << "light_type:" << LightType << endl;
+                    cout << "light_distance:" << ingDistanceArray[i] << endl;
 
                     auto end = std::chrono::steady_clock::now();
                     std::chrono::duration<double> elapsed_seconds = end - start;
                     std::cout << "get light elapsed time: " << elapsed_seconds.count() << "s\n";
-                }
+                }//end of if
+            }//end of for
+            if (!getLight_flag_)
+            {
+                lightcount--;
+            }
+            getLight_flag_=false;
+            std::cout << "lightcount:" << lightcount << std::endl;
+            // dont detect light;
+            if (lightcount < 1)
+            {
+                private_nh.setParam("light_type", Traffic_Light::NO_LIFHT);
             }
         }
     }
@@ -244,8 +267,8 @@ namespace Realsense
         private_nh.param<std::string>("light_topic_out", light_topic_out_, "/light_out");
         private_nh.param<std::string>("obj_type", obj_type, "traffic light");
 
-        tracker_img_sub_ = private_nh.subscribe<rockauto_msgs::ImageObj>(light_topic_in_, 1, &traffic_light::image_cb, this);
-        tracker_img_pub_ = private_nh.advertise<rockauto_msgs::TrafficLightResult>(light_topic_out_, 1);
+        tracker_img_sub_ = private_nh.subscribe<smartcar_msgs::ImageObj>(light_topic_in_, 1, &traffic_light::image_cb, this);
+        tracker_img_pub_ = private_nh.advertise<smartcar_msgs::TrafficLightResult>(light_topic_out_, 1);
 
         ros::spin();
     }

@@ -4,7 +4,7 @@
 #include "realsense/example-utils.hpp"
 #include "realsense/cv-helpers.hpp"
 #include "realsense/example.hpp"
-#include <rockauto_msgs/ImageObj.h>
+
 
 namespace RealSense
 {

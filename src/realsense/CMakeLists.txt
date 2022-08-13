@@ -23,7 +23,8 @@ find_package(catkin REQUIRED COMPONENTS
   nodelet
   pcl_conversions
   pcl_ros
-  rockauto_msgs
+  # rockauto_msgs
+  smartcar_msgs
   roscpp
   sensor_msgs
   tf
@@ -86,7 +87,7 @@ target_link_libraries(detector nvinfer nvinfer_plugin nvparsers "stdc++fs")
 # LINK_DIRECTORIES(/home/agx/Documents/zgq/ros/catkin_trt/devel/lib/)
 add_executable(${PROJECT_NAME}_node src/realsense_node.cpp)
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_include_directories(${PROJECT_NAME}_node PRIVATE rc/trt_yolo/modules/ rc/trt_yolo/extra/)
+target_include_directories(${PROJECT_NAME}_node PRIVATE src/trt_yolo/modules/ src/trt_yolo/extra/)
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   detector
