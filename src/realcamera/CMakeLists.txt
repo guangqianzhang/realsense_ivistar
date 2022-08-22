@@ -17,7 +17,7 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath -Wl,$ORIGIN")
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-set(cv_bridge_DIR /home/agx/Documents/zgq/ros/catkin_cvbg/devel/share/cv_bridge/cmake)
+set(cv_bridge_DIR /home/zgq/cv_/devel/share/cv_bridge/cmake)
 find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   message_generation
@@ -151,19 +151,19 @@ include
 #                                              ${CUDA_TOOLKIT_ROOT_DIR}/include)
 # target_link_libraries(detector nvinfer nvinfer_plugin nvparsers "stdc++fs")
 
-LINK_DIRECTORIES(../../devel/lib/)
+# LINK_DIRECTORIES(../../devel/lib/)
 # LINK_DIRECTORIES(/home/agx/Documents/zgq/ros/catkin_trt/devel/lib/)
 
-add_executable(${PROJECT_NAME}_node src/realcamera_node.cpp )
-add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-# target_include_directories(${PROJECT_NAME}_node PRIVATE trt_yolo/modules/ trt_yolo/extra/)
-target_link_libraries(${PROJECT_NAME}_node
-  ${catkin_LIBRARIES}
-  detector
-  ${ALL_TARGET_LIBRARIES}
-  ${DEPENDENCIES}
-  ${realsense2_LIBRARY}
-)
+# add_executable(${PROJECT_NAME}_node src/realcamera_node.cpp )
+# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# # target_include_directories(${PROJECT_NAME}_node PRIVATE trt_yolo/modules/ trt_yolo/extra/)
+# target_link_libraries(${PROJECT_NAME}_node
+#   ${catkin_LIBRARIES}
+#   detector
+#   ${ALL_TARGET_LIBRARIES}
+#   ${DEPENDENCIES}
+#   ${realsense2_LIBRARY}
+# )
 add_executable(light_node src/trafficlight_node.cpp )
 add_dependencies(light_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 # target_include_directories(${PROJECT_NAME}_node PRIVATE trt_yolo/modules/ trt_yolo/extra/)

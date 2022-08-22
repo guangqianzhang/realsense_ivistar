@@ -26,8 +26,18 @@ int main(int argc, char *argv[])
     ros::Publisher object_pub_;
     ros::Publisher Light_pub_;
     ros::Rate loopRate(10);
-    object_pub_ = private_nh.advertise<smartcar_msgs::DetectedObjectArray>("/cameraObj", 1);
-    Light_pub_ = private_nh.advertise<smartcar_msgs::ImageObjects>("/lightObj", 1);
+    std::string camera_objs_topic_;
+    std::string light_obj_topic_;
+    std::string __NODE_NAME__ = ros::this_node::getName();
+
+
+    private_nh.param<std::string>("ImageObj_topic", camera_objs_topic_, "/realsense/image_Obj");
+    std::cout << __NODE_NAME__ << ":ImageObj_topic:" << camera_objs_topic_.c_str() << std::endl;
+    private_nh.param<std::string>("Light_topic", light_obj_topic_, "/light_in");
+    std::cout << __NODE_NAME__ << ":Light_topic:" << light_obj_topic_.c_str() << std::endl;
+
+    object_pub_ = private_nh.advertise<smartcar_msgs::DetectedObjectArray>(camera_objs_topic_, 1);
+    Light_pub_ = private_nh.advertise<smartcar_msgs::ImageObjects>(light_obj_topic_, 1);
     ROS_INFO("hello realsense!");
 
     rs2::log_to_console(RS2_LOG_SEVERITY_ERROR);
@@ -65,13 +75,16 @@ int main(int argc, char *argv[])
         // auto color_mat = frame_to_mat(color_frame);//40ms-10
         cv::Mat color_mat(cv::Size(640, 480), CV_8UC3, (void *)color_data.get_data(), cv::Mat::AUTO_STEP); // 38ms-10
         auto end = std::chrono::system_clock::now();
-        std::cout << "time:" << std::chrono::duration_cast<chrono::milliseconds>(end - start).count() << endl;
+        std::cout << "video time:" << std::chrono::duration_cast<chrono::milliseconds>(end - start).count()<<"ms" << endl;
         // cv::Mat depth_mat = (cv::Size(640, 480), CV_16U, (void *)depth_data.get_data(), cv::Mat::AUTO_STEP);
         cv::Mat work_frame;
         color_mat.copyTo(work_frame);
         std::vector<cv::Mat> batch_img;
         batch_img.push_back(work_frame);
         trt_detect_->Run(batch_img, batch_res);
+         auto end_de = std::chrono::system_clock::now();
+        std::cout << "detect time:" << std::chrono::duration_cast<chrono::milliseconds>(end_de - end).count()<<"ms" << endl;
+
         smartcar_msgs::DetectedObjectArray ObjArray;
         smartcar_msgs::DetectedObject result_Obj;
         smartcar_msgs::ImageObjects Lightobjs;
@@ -125,16 +138,18 @@ int main(int argc, char *argv[])
                 std::stringstream stream;
                 stream << std::fixed << std::setprecision(2) << "id:" << r.id << "x:" << point[0] << " y:" << point[1] << " z:" << point[2];
                 cv::putText(batch_img[i], stream.str(), cv::Point(r.rect.x, r.rect.y - 5), 0, 0.5, cv::Scalar(0, 0, 255), 2);
-            }//end of batchs in an image
+            } // end of batchs in an image
             ObjArray.objects.push_back(result_Obj);
-            Light_pub_.publish(LightObj);
+            
+
             cv::namedWindow("image" + std::to_string(i), cv::WINDOW_NORMAL);
             cv::imshow("image" + std::to_string(i), batch_img[i]);
             cv::waitKey(10);
-        }//end of images
+        } // end of images
 
         // imshow("color", color_mat);
         // cv::waitKey(10);
+        Light_pub_.publish(LightObj);
         object_pub_.publish(ObjArray);
         double end_time = (double)cv::getTickCount();
         double fps = cv::getTickFrequency() / (end_time - start_time);

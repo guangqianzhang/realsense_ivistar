@@ -43,8 +43,8 @@ namespace RealSense
         std::string light_topic_out_;
         std::string light_topic_in_;
 
-        ros::Subscriber tracker_img_sub_;
-        ros::Publisher tracker_img_pub_;
+        ros::Subscriber light_img_sub_;
+        ros::Publisher light_img_pub_;
         ros::NodeHandle private_nh;
 
     private:
@@ -186,8 +186,8 @@ namespace RealSense
 
         auto start = std::chrono::steady_clock::now();
         smartcar_msgs::TrafficLightResultPtr light_result;
-        int num = obj->car_num;
-        std::vector<smartcar_msgs::ImageObj> Lightobjs = obj->Objs;
+        // int num = obj->car_num;                                     // no used
+        std::vector<smartcar_msgs::ImageObj> Lightobjs = obj->Objs; // light objs
 
         for (auto it = Lightobjs.begin(); it != Lightobjs.end(); ++it)
         {
@@ -214,6 +214,8 @@ namespace RealSense
                 }
                 cv::Mat raw_img = (cv_ptr->image);
                 workimage = raw_img.clone();
+                cv::imshow("l", workimage);
+                waitKey();
                 this->setMask(workimage);
                 // this->ShowMask();
                 LightType = this->count_color();
@@ -235,25 +237,30 @@ namespace RealSense
         // dont detect light;
         if (lightcount < 1)
         {
+            lightcount=0;
             private_nh.setParam("light_type", Traffic_Light::NO_LIFHT);
         }
 
         auto end = std::chrono::steady_clock::now();
         std::chrono::duration<double> elapsed_seconds = end - start;
         std::cout << "get light elapsed time: " << elapsed_seconds.count() << "s\n";
-
     }
     Traffic_light::Traffic_light(ros::NodeHandle &nh) : private_nh(nh)
     {
         ROS_INFO("traffic light !");
         light_running_ = true;
+        __NODE_NAME__ = ros::this_node::getName();
 
         private_nh.param<std::string>("light_topic_in", light_topic_in_, "/light_in");
+        std::cout << __NODE_NAME__ << ":light_topic_in:" << light_topic_in_.c_str() << std::endl;
         private_nh.param<std::string>("light_topic_out", light_topic_out_, "/light_out");
-        private_nh.param<std::string>("obj_type", obj_type, "traffic light");
+        std::cout << __NODE_NAME__ << ":light_topic_out_:" << light_topic_out_.c_str() << std::endl;
 
-        tracker_img_sub_ = private_nh.subscribe<smartcar_msgs::ImageObjects>(light_topic_in_, 1, &Traffic_light::image_cb, this);
-        tracker_img_pub_ = private_nh.advertise<smartcar_msgs::TrafficLightResult>(light_topic_out_, 1);
+        private_nh.param<std::string>("obj_type", obj_type, "traffic_light");
+        std::cout << __NODE_NAME__ << ":obj_type:" << obj_type.c_str() << std::endl;
+
+        light_img_sub_ = private_nh.subscribe<smartcar_msgs::ImageObjects>(light_topic_in_, 1, &Traffic_light::image_cb, this);
+        light_img_pub_ = private_nh.advertise<smartcar_msgs::TrafficLightResult>(light_topic_out_, 1);
 
         ros::spin();
     }

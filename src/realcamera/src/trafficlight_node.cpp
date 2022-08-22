@@ -10,8 +10,8 @@ int main(int argc, char *argv[])
 
     ROS_INFO("hello traffic light!");
 
-    // RealSense::traffic_light light(private_nh);
+
     RealSense::Traffic_light light(private_nh);
-    // RealSense::traffic_light TLight(private_nh);
+ 
     return 0;
 }
