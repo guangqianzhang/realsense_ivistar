@@ -6,12 +6,12 @@
 	<arg name="obj_type" default="traffic_light" />
 	<arg name="detection_flag" default="true"/>
 
-	<node pkg="realsense" type="realsense_node"	name="camera" output="screen">	
+	<!-- <node pkg="realsense" type="realsense_node"	name="camera" output="screen">	
 		<param name="Light_topic" value="$(arg camera_light_topic)" />
 		<param name="ImageObj_topic" value="$(arg camera_dete_topic)" />
 		<param name ="detection_flag" value="$(arg detection_flag)" />
 		<param name="stop_type" value="false"/>
-	</node>
+	</node> -->
 	<node pkg="realsense" type="trafficlight_node"	name="trafficlight" output="screen">	
 		<param name="light_topic_in" value="$(arg camera_light_topic)" />
 		<param name="obj_type" value="$(arg obj_type)"/>

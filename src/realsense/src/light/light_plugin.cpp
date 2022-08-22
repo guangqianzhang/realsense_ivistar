@@ -91,7 +91,7 @@ namespace Realsense
 
                 for (size_t i = 0; i < imgRectArray.size(); i++)
                 {
-                    if (imgLabelArray[i].compare("traffic light") == 0)
+                    if (imgLabelArray[i].compare("traffic_light") == 0)
                     {
                         rockauto_msgs::TrafficLightResultPtr light_result;
                         light_result->distance=ingDistanceArray[i];

@@ -16,7 +16,7 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath -Wl,$ORIGIN")
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-set(cv_bridge_DIR /home/agx/Documents/zgq/ros/catkin_cvbg/devel/share/cv_bridge/cmake)
+set(cv_bridge_DIR /home/zgq/cv_/devel/share/cv_bridge/cmake)
 find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   message_generation
@@ -78,23 +78,23 @@ target_link_libraries(real
   ${ALL_TARGET_LIBRARIES}
   ${DEPENDENCIES}
 )
-file(GLOB_RECURSE sources src/trt_yolo/modules/*.hpp src/trt_yolo/modules/*.cpp 
-                        src/trt_yolo/modules/*.h src/trt_yolo/modules/*.cu src/trt_yolo/extra/*.h)
-add_library(detector SHARED ${sources})
-target_include_directories(detector PRIVATE src/trt_yolo/extra/ src/trt_yolo/modules/ ${OpenCV_INCLUDE_DIRS} ${CUDA_TOOLKIT_ROOT_DIR}/include)
-target_link_libraries(detector nvinfer nvinfer_plugin nvparsers "stdc++fs")
+# file(GLOB_RECURSE sources src/trt_yolo/modules/*.hpp src/trt_yolo/modules/*.cpp 
+#                         src/trt_yolo/modules/*.h src/trt_yolo/modules/*.cu src/trt_yolo/extra/*.h)
+# add_library(detector SHARED ${sources})
+# target_include_directories(detector PRIVATE src/trt_yolo/extra/ src/trt_yolo/modules/ ${OpenCV_INCLUDE_DIRS} ${CUDA_TOOLKIT_ROOT_DIR}/include)
+# target_link_libraries(detector nvinfer nvinfer_plugin nvparsers "stdc++fs")
 
 # LINK_DIRECTORIES(/home/agx/Documents/zgq/ros/catkin_trt/devel/lib/)
-add_executable(${PROJECT_NAME}_node src/realsense_node.cpp)
-add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_include_directories(${PROJECT_NAME}_node PRIVATE src/trt_yolo/modules/ src/trt_yolo/extra/)
-target_link_libraries(${PROJECT_NAME}_node
-  ${catkin_LIBRARIES}
-  detector
-  ${ALL_TARGET_LIBRARIES}
-  ${DEPENDENCIES}
-  ${realsense2_LIBRARY}
-)
+# add_executable(${PROJECT_NAME}_node src/realsense_node.cpp)
+# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# target_include_directories(${PROJECT_NAME}_node PRIVATE src/trt_yolo/modules/ src/trt_yolo/extra/)
+# target_link_libraries(${PROJECT_NAME}_node
+#   ${catkin_LIBRARIES}
+#   detector
+#   ${ALL_TARGET_LIBRARIES}
+#   ${DEPENDENCIES}
+#   ${realsense2_LIBRARY}
+# )
 add_executable(trafficlight_node src/trafficlight_node.cpp)
 add_dependencies(trafficlight_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 # target_include_directories(trafficlight_node PRIVATE rc/trt_yolo/modules/ rc/trt_yolo/extra/)

@@ -34,7 +34,7 @@ namespace Realsense
         };
         Traffic_Light LightType;
         bool getLight_flag_ = false;
-        unsigned int lightcount = 0;
+        int lightcount = 1;
         unsigned int Rlightcount;
         unsigned int Ylightcount;
         unsigned int Glightcount;
@@ -46,6 +46,7 @@ namespace Realsense
         ros::Subscriber tracker_img_sub_;
         ros::Publisher tracker_img_pub_;
         ros::NodeHandle private_nh;
+        ros::Publisher img_pub_;
 
     private:
         //利用hsv模型提取image中的颜色
@@ -218,10 +219,12 @@ namespace Realsense
 
             for (size_t i = 0; i < imgRectArray.size(); i++)
             {
+                cv::rectangle(raw_img, imgcvRectArray[i], cv::Scalar(0, 0, 255));
                 if (imgLabelArray[i].compare(obj_type) == 0)
                 // if (1)
                 {
-                    lightcount++;
+                    
+                        lightcount++;
                     getLight_flag_ = true;
                     light_result.reset(new smartcar_msgs::TrafficLightResult);
                     light_result->distance = ingDistanceArray[i];
@@ -230,7 +233,7 @@ namespace Realsense
                     imgWidth_ = workimage.cols;
                     // light_.reset(new traffic_light);
                     this->setMask(workimage);
-                    // this->ShowMask();
+                    this->ShowMask();
                     LightType = this->count_color();
 
                     light_result->recognition_result = LightType;
@@ -243,20 +246,24 @@ namespace Realsense
                     auto end = std::chrono::steady_clock::now();
                     std::chrono::duration<double> elapsed_seconds = end - start;
                     std::cout << "get light elapsed time: " << elapsed_seconds.count() << "s\n";
-                }//end of if
-            }//end of for
-            if (!getLight_flag_)
-            {
-                lightcount--;
-            }
-            getLight_flag_=false;
-            std::cout << "lightcount:" << lightcount << std::endl;
+                } // end of if
+            }     // end of for
+
             // dont detect light;
-            if (lightcount < 1)
-            {
-                private_nh.setParam("light_type", Traffic_Light::NO_LIFHT);
-            }
         }
+        if (!getLight_flag_)
+        {
+            lightcount--;
+        }
+        getLight_flag_ = false;
+        std::cout << "lightcount=" << lightcount << std::endl;
+        if (lightcount < 1)
+        {
+            lightcount = 0;
+            private_nh.setParam("light_type", Traffic_Light::NO_LIFHT);
+        }
+        cv_ptr->image = raw_img;
+        img_pub_.publish(*cv_ptr->toImageMsg());
     }
     traffic_light::traffic_light(ros::NodeHandle &nh) : private_nh(nh)
     {
@@ -269,7 +276,7 @@ namespace Realsense
 
         tracker_img_sub_ = private_nh.subscribe<smartcar_msgs::ImageObj>(light_topic_in_, 1, &traffic_light::image_cb, this);
         tracker_img_pub_ = private_nh.advertise<smartcar_msgs::TrafficLightResult>(light_topic_out_, 1);
-
+        img_pub_ = private_nh.advertise<sensor_msgs::Image>("helloimage", 1);
         ros::spin();
     }
 
