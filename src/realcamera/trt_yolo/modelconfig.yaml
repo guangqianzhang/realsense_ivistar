@@ -1,0 +1,4 @@
+medel_path: /home/agx/Documents/tensoort/configs
+file_model_cfg: /yolov5-6.0/yolov5n.cfg
+file_model_weights: /yolov5-6.0/yolov5n.weights
+calibration_image_list_file_txt: /calibration_images.txt

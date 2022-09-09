@@ -1,2 +1,2 @@
-# realsense_ivistar
+# realsense_zibo
 realsense in xavier

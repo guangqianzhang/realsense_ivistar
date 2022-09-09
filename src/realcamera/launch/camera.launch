@@ -1,0 +1,27 @@
+<launch>
+	<arg name="camera_light_topic" default="/realsense_img" />
+	<arg name="camera_dete_topic" default="/realsense_obj" />
+<!-- for detect postprocese  used in trafficlight-->
+	<arg name="obj_type" default="traffic_light" />
+	<arg name="detection_flag" default="true"/>
+
+    <node pkg="realcamera" type="realcamera_node"	name="camera" output="screen">	
+		<param name="Light_topic" value="$(arg camera_light_topic)" />
+		<param name="ImageObj_topic" value="$(arg camera_dete_topic)" />
+		
+		<param name="stop_type" value="false"/>
+	</node>
+
+     <node pkg="realcamera" type="light_node"	name="trafficlight" output="screen">	
+		<param name="light_topic_in" value="$(arg camera_light_topic)" />
+		<param name="obj_type" value="$(arg obj_type)"/>
+		<param name="light_type" value="-1"/>
+	</node>
+		
+    <node pkg="realcamera" type="start_node"	name="startflag" >	
+		<param name="xlimit" value="2"/>
+		<param name="zlimit" value="3.9"/>
+		<param name="average_count" value="80"/>
+		<param name="TrigSize" value="1000"/>
+	</node> 
+</launch>
